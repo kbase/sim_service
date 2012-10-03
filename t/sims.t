@@ -1,7 +1,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 59;
+use Test::More;
 use Data::Dumper;
 
 use Bio::KBase::SimService::Client;
@@ -32,7 +32,7 @@ can_ok($obj, qw[
 #  Test 4 - Can a new object be created with valid parameter? 
 #
 
-my $id_server_url = "http://localhost:7031/";
+my $id_server_url = "http://localhost:7055/";
 #my $id_server_url = "http://bio-data-1.mcs.anl.gov/services/idserver";
 my $id_server = Bio::KBase::SimService::Client->new($id_server_url);
 ok( defined $id_server, "Did an object get defined" );               
@@ -44,30 +44,47 @@ isa_ok( $id_server, 'Bio::KBase::SimService::Client', "Is it in the right class"
 #
 #  METHOD: external_ids_to_kbase_ids
 #
-note("Test   external_ids_to_kbase_ids");
+note("Test   sims");
 
-my $test_kbase_id = '';
-my $test_seed_id  = 'fig|1000565.3.peg.4';
+my $id = "kb|g.0.peg.4";
+my $options = {};
 
 #-- Tests 6 and 7 - Too many and too few parameters
-eval {$return = $id_server->external_ids_to_kbase_ids('SEED',[$test_seed_id],'EXTRA');  };
+eval {$return = $id_server->sims([$id], $options, 'EXTRA')};
 isnt($@, undef, 'Call with too many parameters failed properly');
 
-eval {$return = $id_server->external_ids_to_kbase_ids('SEED');  };
+eval {$return = $id_server->sims([$id]);  };
 isnt($@, undef, 'Call with too few parameters failed properly');
 
 #-- Tests 8 and 9 - Use invalid data.  Expect empty hash to be returned
-$return = $id_server->external_ids_to_kbase_ids('SEED', ['BOGUS']);
-is(ref($return), 'HASH', "Use InValid data: external_ids_to_kbase_ids returns a hash");
+$return = $id_server->sims(['abcdefghijkl'], $options);
+is(ref($return), 'ARRAY', "Use InValid data:  sims returns a list");
 
-is(keys(%$return), 0, "Give no input: Hash is empty -- No warning");
+is(@$return, 0, "Give no input: Hash is empty -- No warning");
 
 #-- Tests 10 and 11 - Use Valid data.  Expect hash with data to be returned
-$return = $id_server->external_ids_to_kbase_ids('SEED', [$test_seed_id]);
-is(ref($return), 'HASH', "Use Valid data: external_ids_to_kbase_ids returns a hash");
+$return = $id_server->sims([$id], $options);
+is(ref($return), 'ARRAY', "Use Valid data: sims returns a list");
 
-@id_keys = keys(%$return);
-isnt(scalar @id_keys, 0, "Use Valid data: hash is not empty");
+isnt(scalar @$return, 0, "Use Valid data: list is not empty");
+
+my @non_kb = grep { $_->[1] !~ /^kb\|/ } @$return;
+
+isnt(@non_kb, 0, "Use valid data (non kb-only): non KB ids appeared");
+
+$options->{kb_only} = 1;
+
+$return = $id_server->sims([$id], $options);
+is(ref($return), 'ARRAY', "Use Valid data: sims returns a list");
+
+isnt(scalar @$return, 0, "Use Valid data: list is not empty");
+
+my @non_kb = grep { $_->[1] !~ /^kb\|/ } @$return;
+
+is(@non_kb, 0, "Use valid data (kb-only): only KB ids appeared");
+
+done_testing();
+__DATA__
 $test_kbase_id = $return->{$id_keys[0]};  ### ID to test kbase_ids_to_external_ids
 
 #-- Tests 12 and 13 - Use Array with both Valid and invalid data.  
