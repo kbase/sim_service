@@ -24,11 +24,8 @@ isa_ok( $obj, 'Bio::KBase::SimService::Client', "Is it in the right class" );
 #  Test 3 - Can the object do all of the methods
 #
 
-can_ok($obj, qw[    kbase_ids_to_external_ids
-    external_ids_to_kbase_ids
-    register_ids
-    allocate_id_range
-    register_allocated_ids
+can_ok($obj, qw[    
+	sims
 ]);
 
 #
