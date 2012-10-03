@@ -1,4 +1,4 @@
-package SimImpl;
+package Bio::KBase::SimService::Impl;
 use strict;
 use Bio::KBase::Exceptions;
 # Use Semantic Versioning (2.0.0-rc.1)
@@ -11,7 +11,17 @@ Sim
 
 =head1 DESCRIPTION
 
+The similarity service exposes the SEED similarity server to the KBase. The
+similarity server stores precomputed all-to-all BLAST similarities for a
+large database of proteins; this database includes all genomes curated by the
+SEED project as well as a variety of third-party protein databases (NCBI
+nr, Uniprot/Swissprot, IMG, etc).
 
+While the SEED similarity server does not itself have knowledge of proteins
+with KBase identifiers, we use the MD5 signature of the protein sequence
+to perform lookups into the similarity server. Similarities returned from
+the similarity server are also identified with the MD5 signature, and are
+mapped back to KBase identifiers using the information in the KBase Central Store.
 
 =cut
 
@@ -45,9 +55,9 @@ sub new
 
 
 
-=head2 get_sims
+=head2 sims
 
-  $return = $obj->get_sims($ids, $options)
+  $return = $obj->sims($ids, $options)
 
 =over 4
 
@@ -58,14 +68,31 @@ sub new
 <pre>
 $ids is a reference to a list where each element is a string
 $options is an options
-$return is a reference to a list where each element is a sim
+$return is a reference to a list where each element is a sim_vec
 options is a reference to a hash where the following keys are defined:
 	kb_only has a value which is an int
-sim is a reference to a hash where the following keys are defined:
-	id1 has a value which is a string
-	id2 has a value which is a string
-	bit_score has a value which is a float
-	p_score has a value which is a float
+	kb_function2 has a value which is an int
+	evalue_cutoff has a value which is a float
+	max_sims has a value which is an int
+sim_vec is a reference to a list containing 18 items:
+	0: a string
+	1: a string
+	2: a float
+	3: an int
+	4: an int
+	5: an int
+	6: an int
+	7: an int
+	8: an int
+	9: an int
+	10: a float
+	11: a float
+	12: an int
+	13: an int
+	14: a string
+	15: a string
+	16: a string
+	17: a string
 
 </pre>
 
@@ -75,14 +102,31 @@ sim is a reference to a hash where the following keys are defined:
 
 $ids is a reference to a list where each element is a string
 $options is an options
-$return is a reference to a list where each element is a sim
+$return is a reference to a list where each element is a sim_vec
 options is a reference to a hash where the following keys are defined:
 	kb_only has a value which is an int
-sim is a reference to a hash where the following keys are defined:
-	id1 has a value which is a string
-	id2 has a value which is a string
-	bit_score has a value which is a float
-	p_score has a value which is a float
+	kb_function2 has a value which is an int
+	evalue_cutoff has a value which is a float
+	max_sims has a value which is an int
+sim_vec is a reference to a list containing 18 items:
+	0: a string
+	1: a string
+	2: a float
+	3: an int
+	4: an int
+	5: an int
+	6: an int
+	7: an int
+	8: an int
+	9: an int
+	10: a float
+	11: a float
+	12: an int
+	13: an int
+	14: a string
+	15: a string
+	16: a string
+	17: a string
 
 
 =end text
@@ -91,13 +135,56 @@ sim is a reference to a hash where the following keys are defined:
 
 =item Description
 
-Retrieve similarities for a set of identifiers.
+Retrieve precomputed protein similarities given a list of identifiers.
+
+The options parameter allows simple configuration of the call. The following
+values in the structure are interpreted:
+
+ kb_only        Only return KBase identifiers (not raw MD5 or other external IDs).
+ kb_function2   For KB identifiers, return the function mapped to id2.
+ evalue_cutoff  Return similarities with an e-value better than this value.
+ max_sims       Return at most this many similarities. The number of values
+                may exceed this due to multiple identifiers mapping to the same sequence.
+
+Each similarity returned is encapsulated in a sim_vec tuple. This tuple
+contains the similar protein identifiers, as well as the columns as seen in the
+blastall -m8 output..
+
+The return is a list of tuples representing the similarity values. The indexes in the
+tuple are defined as follows:
+
+  0   id1        query sequence id
+  1   id2        subject sequence id
+  2   iden       percentage sequence identity
+  3   ali_ln     alignment length
+  4   mismatches  number of mismatch
+  5   gaps       number of gaps
+  6   b1         query seq match start
+  7   e1         query seq match end
+  8   b2         subject seq match start
+  9   e2         subject seq match end
+ 10   psc        match e-value
+ 11   bsc        bit score
+ 12   ln1        query sequence length
+ 13   ln2        subject sequence length
+ 14   tool       tool used to produce similarities
+
+All following fields may vary by tool:
+
+ 15   loc1       query seq locations string (b1-e1,b2-e2,b3-e3)
+ 16   loc2       subject seq locations string (b1-e1,b2-e2,b3-e3)
+ 17   dist       tree distance
+
+We also return this column for any lookups when the kb_function2 flag
+is enabled.
+
+ 18  function2   The function associated with id2 in the KBase.
 
 =back
 
 =cut
 
-sub get_sims
+sub sims
 {
     my $self = shift;
     my($ids, $options) = @_;
@@ -106,14 +193,14 @@ sub get_sims
     (ref($ids) eq 'ARRAY') or push(@_bad_arguments, "Invalid type for argument \"ids\" (value was \"$ids\")");
     (ref($options) eq 'HASH') or push(@_bad_arguments, "Invalid type for argument \"options\" (value was \"$options\")");
     if (@_bad_arguments) {
-	my $msg = "Invalid arguments passed to get_sims:\n" . join("", map { "\t$_\n" } @_bad_arguments);
+	my $msg = "Invalid arguments passed to sims:\n" . join("", map { "\t$_\n" } @_bad_arguments);
 	Bio::KBase::Exceptions::ArgumentValidationError->throw(error => $msg,
-							       method_name => 'get_sims');
+							       method_name => 'sims');
     }
 
-    my $ctx = $SimServer::CallContext;
+    my $ctx = $Bio::KBase::SimService::Service::CallContext;
     my($return);
-    #BEGIN get_sims
+    #BEGIN sims
     
     my $ua = LWP::UserAgent->new();
     my $server_url = "http://sim-server.nmpdr.org/simserver/perl/sims.pl";
@@ -162,6 +249,14 @@ sub get_sims
     {
 	push(@params, [select => 'raw']);
     }
+    if ($options->{evalue_cutoff})
+    {
+	push(@params, [maxP => $options->{evalue_cutoff}]);
+    }
+    if ($options->{max_sims})
+    {
+	push(@params, [maxN => $options->{max_sims}]);
+    }
     my $params = join("&", map { join("=", @$_) } @params);
 
     my $req_url = "$server_url?$params";
@@ -174,6 +269,13 @@ sub get_sims
 
     $return = [];
 
+    my $items = "IsProteinFor";
+    my $ret_fields = "IsProteinFor(from_link) IsProteinFor(to_link)";
+    if ($options->{kb_function2})
+    {
+	$items .= " Feature";
+	$ret_fields .= " Feature(function)";
+    }
     for my $line (split(/\n/, $resp->content))
     {
         my @items = split(/\t/, $line);
@@ -189,39 +291,46 @@ sub get_sims
 
 	if (!$options->{kb_only})
 	{
-	    push(@$return, { 
-		id1 => $id1,
-		id2 => $id2,
-		bit_score => $bsc,
-		p_score => $psc,
-	    });
+	    push(@$return, [@items]);
+	    # push(@$return, { 
+	    # 	id1 => $id1,
+	    # 	id2 => $id2,
+	    # 	bit_score => $bsc,
+	    # 	p_score => $psc,
+	    # });
 	}
 	if ($id2 =~ /^gnl\|md5\|(.*)/)
 	{
-	    my @res = $self->{cdmi}->GetAll('IsProteinFor',
-					"IsProteinFor(from_link) = ?",
-					[$1],
-					'IsProteinFor(from_link) IsProteinFor(to_link)');
+	    my @res = $self->{cdmi}->GetAll($items,
+					    "IsProteinFor(from_link) = ?",
+					    [$1],
+					    $ret_fields);
             for my $ret (@res)
             {
-                my($xid, $kb) = @$ret;
-		push(@$return, { 
-		    id1 => $id1,
-		    id2 => $kb,
-		    bit_score => $bsc,
-		    p_score => $psc,
-		});
+                my($xid, $kb, $fn) = @$ret;
+		my $tup = [$id1, $kb, @items[2..$#items]];
+		if ($options->{kb_function2})
+		{
+		    $tup->[17] = $fn;
+		}
+		push(@$return, $tup);
+
+		# push(@$return, { 
+		#     id1 => $id1,
+		#     id2 => $kb,
+		#     bit_score => $bsc,
+		#     p_score => $psc,
+		# });
             }
 	}
     }
-
-    #END get_sims
+    #END sims
     my @_bad_returns;
     (ref($return) eq 'ARRAY') or push(@_bad_returns, "Invalid type for return variable \"return\" (value was \"$return\")");
     if (@_bad_returns) {
-	my $msg = "Invalid returns passed to get_sims:\n" . join("", map { "\t$_\n" } @_bad_returns);
+	my $msg = "Invalid returns passed to sims:\n" . join("", map { "\t$_\n" } @_bad_returns);
 	Bio::KBase::Exceptions::ArgumentValidationError->throw(error => $msg,
-							       method_name => 'get_sims');
+							       method_name => 'sims');
     }
     return($return);
 }
@@ -267,7 +376,7 @@ sub version {
 
 
 
-=head2 sim
+=head2 sim_vec
 
 =over 4
 
@@ -275,7 +384,38 @@ sub version {
 
 =item Description
 
-Each similarity returned is encapsulated in a sim data object.
+Each similarity returned is encapsulated in a sim_vec tuple. This tuple
+contains the similar protein identifiers, as well as the columns as seen in the
+blastall -m8 output..
+
+The columns in the tuple are defined as follows:
+
+  0   id1        query sequence id
+  1   id2        subject sequence id
+  2   iden       percentage sequence identity
+  3   ali_ln     alignment length
+  4   mismatches  number of mismatch
+  5   gaps       number of gaps
+  6   b1         query seq match start
+  7   e1         query seq match end
+  8   b2         subject seq match start
+  9   e2         subject seq match end
+ 10   psc        match e-value
+ 11   bsc        bit score
+ 12   ln1        query sequence length
+ 13   ln2        subject sequence length
+ 14   tool       tool used to produce similarities
+
+All following fields may vary by tool:
+
+ 15   loc1       query seq locations string (b1-e1,b2-e2,b3-e3)
+ 16   loc2       subject seq locations string (b1-e1,b2-e2,b3-e3)
+ 17   dist       tree distance
+
+We also return this column for any lookups when the kb_function2 flag
+is enabled:
+
+ 18  function2   The function associated with id2 in the KBase.
 
 
 =item Definition
@@ -283,11 +423,25 @@ Each similarity returned is encapsulated in a sim data object.
 =begin html
 
 <pre>
-a reference to a hash where the following keys are defined:
-id1 has a value which is a string
-id2 has a value which is a string
-bit_score has a value which is a float
-p_score has a value which is a float
+a reference to a list containing 18 items:
+0: a string
+1: a string
+2: a float
+3: an int
+4: an int
+5: an int
+6: an int
+7: an int
+8: an int
+9: an int
+10: a float
+11: a float
+12: an int
+13: an int
+14: a string
+15: a string
+16: a string
+17: a string
 
 </pre>
 
@@ -295,11 +449,25 @@ p_score has a value which is a float
 
 =begin text
 
-a reference to a hash where the following keys are defined:
-id1 has a value which is a string
-id2 has a value which is a string
-bit_score has a value which is a float
-p_score has a value which is a float
+a reference to a list containing 18 items:
+0: a string
+1: a string
+2: a float
+3: an int
+4: an int
+5: an int
+6: an int
+7: an int
+8: an int
+9: an int
+10: a float
+11: a float
+12: an int
+13: an int
+14: a string
+15: a string
+16: a string
+17: a string
 
 
 =end text
@@ -314,6 +482,17 @@ p_score has a value which is a float
 
 
 
+=item Description
+
+Option specification. The following options are available for the sims call:
+
+  kb_only        Only return KBase identifiers (not raw MD5 or other external IDs).
+  kb_function2   For KB identifiers, return the function mapped to id2.
+  evalue_cutoff  Return similarities with an e-value better than this value.
+  max_sims       Return at most this many similarities. The number of values
+                 may exceed this due to multiple identifiers mapping to the same sequence.
+
+
 =item Definition
 
 =begin html
@@ -321,6 +500,9 @@ p_score has a value which is a float
 <pre>
 a reference to a hash where the following keys are defined:
 kb_only has a value which is an int
+kb_function2 has a value which is an int
+evalue_cutoff has a value which is a float
+max_sims has a value which is an int
 
 </pre>
 
@@ -330,6 +512,9 @@ kb_only has a value which is an int
 
 a reference to a hash where the following keys are defined:
 kb_only has a value which is an int
+kb_function2 has a value which is an int
+evalue_cutoff has a value which is a float
+max_sims has a value which is an int
 
 
 =end text
