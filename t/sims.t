@@ -32,14 +32,13 @@ can_ok($obj, qw[
 #  Test 4 - Can a new object be created with valid parameter? 
 #
 
-my $id_server_url = "http://localhost:7055/";
-#my $id_server_url = "http://bio-data-1.mcs.anl.gov/services/idserver";
-my $id_server = Bio::KBase::SimService::Client->new($id_server_url);
-ok( defined $id_server, "Did an object get defined" );               
+my $url = "http://localhost:7055/";
+my $sim_service = Bio::KBase::SimService::Client->new($url);
+ok( defined $sim_service, "Did an object get defined" );               
 #
 #  Test 5 - Is the object in the right class?
 #
-isa_ok( $id_server, 'Bio::KBase::SimService::Client', "Is it in the right class" );   
+isa_ok( $sim_service, 'Bio::KBase::SimService::Client', "Is it in the right class" );   
 
 #
 #  METHOD: external_ids_to_kbase_ids
@@ -50,20 +49,20 @@ my $id = "kb|g.0.peg.4";
 my $options = {};
 
 #-- Tests 6 and 7 - Too many and too few parameters
-eval {$return = $id_server->sims([$id], $options, 'EXTRA')};
+eval {$return = $sim_service->sims([$id], $options, 'EXTRA')};
 isnt($@, undef, 'Call with too many parameters failed properly');
 
-eval {$return = $id_server->sims([$id]);  };
+eval {$return = $sim_service->sims([$id]);  };
 isnt($@, undef, 'Call with too few parameters failed properly');
 
 #-- Tests 8 and 9 - Use invalid data.  Expect empty hash to be returned
-$return = $id_server->sims(['abcdefghijkl'], $options);
+$return = $sim_service->sims(['abcdefghijkl'], $options);
 is(ref($return), 'ARRAY', "Use InValid data:  sims returns a list");
 
 is(@$return, 0, "Give no input: Hash is empty -- No warning");
 
-#-- Tests 10 and 11 - Use Valid data.  Expect hash with data to be returned
-$return = $id_server->sims([$id], $options);
+#-- Tests 10,11,12 - Use Valid data.  Expect hash with data to be returned
+$return = $sim_service->sims([$id], $options);
 is(ref($return), 'ARRAY', "Use Valid data: sims returns a list");
 
 isnt(scalar @$return, 0, "Use Valid data: list is not empty");
@@ -72,16 +71,62 @@ my @non_kb = grep { $_->[1] !~ /^kb\|/ } @$return;
 
 isnt(@non_kb, 0, "Use valid data (non kb-only): non KB ids appeared");
 
+#-- Tests 13,14,15 - Use Valid data with KB option.  Expect hash with data to be returned
 $options->{kb_only} = 1;
 
-$return = $id_server->sims([$id], $options);
+$return = $sim_service->sims([$id], $options);
 is(ref($return), 'ARRAY', "Use Valid data: sims returns a list");
 
 isnt(scalar @$return, 0, "Use Valid data: list is not empty");
 
-my @non_kb = grep { $_->[1] !~ /^kb\|/ } @$return;
+@non_kb = grep { $_->[1] !~ /^kb\|/ } @$return;
 
 is(@non_kb, 0, "Use valid data (kb-only): only KB ids appeared");
+
+
+#-- Tests 16-17 - Tests with invalid options added, should still succeed (probably
+# should produce warning, but currently does not)
+$options = {};
+$options->{some_made_up_option} = 1;
+$options->{random_opt12} = -5;
+$options->{kb_0nly} = 1;
+$return = $sim_service->sims([$id], $options);
+
+is(ref($return), 'ARRAY', "Use Valid data (invalid options): sims returns a list");
+
+isnt(scalar @$return, 0, "Use Valid data (invalid options): list is not empty");
+
+#-- Tests 18-20 - Tests with max_sims option
+$options = {};
+$options->{max_sims} = 10;
+$return = $sim_service->sims([$id], $options);
+
+is(ref($return), 'ARRAY', "Use Valid data (max_sims option): sims returns a list");
+
+isnt(scalar @$return, 0, "Use Valid data (max_sims option): list is not empty");
+
+is(scalar @$return, 10, "Use Valid data (max_sims option): list is exactly length 10");
+
+#-- Tests 21-23 - Tests with evalue_cutoff option
+$options = {};
+$options->{evalue_cutoff} = 3e-6;
+$return = $sim_service->sims([$id], $options);
+
+is(ref($return), 'ARRAY', "Use Valid data (evalue_cutoff option): sims returns a list");
+
+isnt(scalar @$return, 0, "Use Valid data (evalue_cutoff option): list is not empty");
+
+#loop over results and make sure all e-vals (col 10 in results tuple) are all below cutoff
+my $bad_count = 0;
+foreach my $match (@$return) {
+	if ( ${$match}[10] > $options->{evalue_cutoff} ) {
+		$bad_count = $bad_count+1;
+	}
+}
+#print "badcount=$bad_count\n";
+is($bad_count, 0, "Use Valid data (evalue_cutoff option): all results are <= e-val cutoff");
+
+
 
 done_testing();
 __DATA__
