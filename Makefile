@@ -12,7 +12,20 @@ DEPS = $(LDIR)/Impl.pm $(LDIR)/Service.pm $(LDIR)/Client.pm
 TPAGE_ARGS = --define kb_top=$(TARGET) --define kb_runtime=$(DEPLOY_RUNTIME) --define kb_service_name=$(SERVICE) \
 	--define kb_service_port=$(SERVICE_PORT)
 
+TESTS = $(wildcard t/*.t)
+
 all: $(DEPS) bin
+
+test:
+	# run each test
+	for t in $(TESTS) ; do \
+		if [ -f $$t ] ; then \
+			$(DEPLOY_RUNTIME)/bin/perl $$t ; \
+			if [ $$? -ne 0 ] ; then \
+				exit 1 ; \
+			fi \
+		fi \
+	done
 
 deploy: $(DEPS) deploy-scripts deploy-libs deploy-service
 
