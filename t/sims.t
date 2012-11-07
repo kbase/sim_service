@@ -60,22 +60,25 @@ isnt($@, undef, 'Call with too many parameters failed properly');
 eval {$return = $sim_server->sims([$id]);  };
 isnt($@, undef, 'Call with too few parameters failed properly');
 
-#-- Tests 8 and 9 - Use invalid data.  Expect empty hash to be returned
+#-- Tests 8 and 9 - Use invalid data.  Expect empty array to be returned
 $return = $sim_server->sims(['abcdefghijkl'], $options);
 is(ref($return), 'ARRAY', "Use InValid data:  sims returns a list");
 
 is(@$return, 0, "Give no input: Hash is empty -- No warning");
 
-#-- Tests 10 and 11 - Use Valid data.  Expect hash with data to be returned
+#-- Tests 10 and 11 - Use Valid data.  Expect array with data to be returned
 $return = $sim_server->sims([$id], $options);
 is(ref($return), 'ARRAY', "Use Valid data: sims returns a list");
 
 isnt(scalar @$return, 0, "Use Valid data: list is not empty");
 
+#-- Test 12 - Are there non KB IDs in the return
 my @non_kb = grep { $_->[1] !~ /^kb\|/ } @$return;
 
 isnt(@non_kb, 0, "Use valid data (non kb-only): non KB ids appeared");
 
+#-- Test 13-15 - Repeat tests 10-12 with kb_only option
+#   Expect only KB IDs to be returned
 $options->{kb_only} = 1;
 
 $return = $sim_server->sims([$id], $options);
@@ -85,7 +88,7 @@ isnt(scalar @$return, 0, "Use Valid data: list is not empty");
 
 my @non_kb = grep { $_->[1] !~ /^kb\|/ } @$return;
 
-is(@non_kb, 0, "Use valid data (kb-only): only KB ids appeared");
+is(scalar @non_kb, 0, "Use valid data (kb-only): only KB ids appeared");
 
 done_testing();
 Server::stop($pid);
@@ -137,6 +140,10 @@ sub stop {
 }
 
 __DATA__
+#
+# Tests leftover from another module which may be used to create tests
+# for this module.  None of the methods below apply to this module.
+#
 $test_kbase_id = $return->{$id_keys[0]};  ### ID to test kbase_ids_to_external_ids
 
 #-- Tests 12 and 13 - Use Array with both Valid and invalid data.  

@@ -73,6 +73,16 @@ cmp_ok(scalar @$one_return, '>=', 15);
 my @non_kb = grep { $_->[1] !~ /^kb\|/ } @$return;
 isnt(@non_kb, 0, "Use valid data (non kb-only): non KB ids appeared");
 
+#-- Test 12 - Repeat test 11 with kb_only option
+#   Expect only KB IDs to be returned
+#
+$options->{kb_only} = 1;
+
+$return = $sim_server->sims([$id], $options);
+@non_kb = grep { $_->[1] !~ /^kb\|/ } @$return;
+is(@non_kb, 0, "Use valid data (kb-only): only KB ids appeared");
+
+
 my %good_value = (
         'kb_only'        => '1',
         'kb_function2'   => '1',
@@ -80,7 +90,7 @@ my %good_value = (
         'max_sims'       => '2',
 );
 
-#-- Tests 12-15 - Test options with good values
+#-- Tests 13-16 - Test options with good values
 note("\nTesting Good Values for each of the options \n");
 foreach my $key (keys(%good_value))
 {
@@ -93,14 +103,14 @@ foreach my $key (keys(%good_value))
 
 note("Run unhappy Tests");
 
-#-- Tests 16 and 17 - Too many and too few parameters
+#-- Tests 17 and 18 - Too many and too few parameters
 eval {$return = $sim_server->sims([$id], $options, 'EXTRA')};
 isnt($@, '', 'Call with too many parameters failed properly');
 
 eval {$return = $sim_server->sims([$id]);  };
 isnt($@, '', 'Call with too few parameters failed properly');
 
-#-- Tests 18 - 20 - Use invalid data.  Expect empty hash to be returned
+#-- Tests 19 - 21 - Use invalid data.  Expect empty hash to be returned
 $return = $sim_server->sims(['abcdefghijkl'], $options);
 ok(!$@, "Call with invalid data and return has no error ");
 is(ref($return), 'ARRAY', "Use InValid data:  sims returns a list");
