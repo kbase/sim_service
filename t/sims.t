@@ -1,7 +1,7 @@
 use strict;
 use warnings;
 
-use Test::More;
+use Test::More tests => 15;
 use Data::Dumper;
 
 use Bio::KBase::SimService::Client;
@@ -86,7 +86,7 @@ is(ref($return), 'ARRAY', "Use Valid data: sims returns a list");
 
 isnt(scalar @$return, 0, "Use Valid data: list is not empty");
 
-my @non_kb = grep { $_->[1] !~ /^kb\|/ } @$return;
+@non_kb = grep { $_->[1] !~ /^kb\|/ } @$return;
 
 is(scalar @non_kb, 0, "Use valid data (kb-only): only KB ids appeared");
 
