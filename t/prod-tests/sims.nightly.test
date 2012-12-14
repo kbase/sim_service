@@ -1,0 +1,194 @@
+use strict;
+use warnings;
+
+use Test::More  tests => 27;
+use Data::Dumper;
+use lib "lib";
+use lib "t/prod-tests";
+use SimTestConfig qw(getHost getPort getURL);
+
+use Bio::KBase::SimService::Client;
+my $obj;
+my $return;
+my @id_keys;
+
+# MAKE A CONNECTION (DETERMINE THE URL TO USE BASED ON THE CONFIG MODULE)
+my $host=getHost(); my $port=getPort();  my $url=getURL();
+print "-> attempting to connect to:'".$url."'\n";
+
+#
+#  Test 1 - Can a new object be created without parameters? 
+#
+#$obj = Bio::KBase::SimService::Client->new($url); # create a new object
+$obj = Bio::KBase::SimService::Client->new(); # create a new object
+ok( defined $obj, "Did an object get defined" );               
+
+#
+#  Test 2 - Is the object in the right class?
+#
+isa_ok( $obj, 'Bio::KBase::SimService::Client', "Is it in the right class" );   
+
+#
+#  Test 3 - Can the object do all of the methods
+#
+
+can_ok($obj, qw[    
+	sims
+]);
+
+#
+#  Test 4 - Can a new object be created with valid parameter? 
+#
+
+
+#my $sim_server_url = "http://bio-data-1.mcs.anl.gov/services/idserver";
+#my $sim_server_url = "http://localhost:7055/";
+my $sim_server = Bio::KBase::SimService::Client->new($url);
+ok( defined $sim_server, "Did an object get defined" );               
+#
+#  Test 5 - Is the object in the right class?
+#
+isa_ok( $sim_server, 'Bio::KBase::SimService::Client', "Is it in the right class" );   
+
+#
+#  METHOD: sims
+#
+note("Test   sims");
+
+my $id = "kb|g.0.peg.4";
+my $options = {};
+
+note("Run happy Tests");
+
+#-- Tests 6-8 - Use Valid data.  Expect array with data to be returned
+$return = $sim_server->sims([$id], $options);
+ok(!$@, "Call with valid data and return has no error ");
+is(ref($return), 'ARRAY', "Use Valid data: sims returns a list");
+isnt(scalar @$return, 0, "Use Valid data: list is not empty");
+
+#-- Tests 9-10 - The returned array is a list of arrays with 15 or more elements in sim_vec
+my $one_return = pop(@$return);
+is(ref($one_return), 'ARRAY', "Use Valid data: the return list contains a list - next test will verify right size list for sim_vec");
+cmp_ok(scalar @$one_return, '>=', 15);
+
+
+#-- Test 11 - Make sure non-KB ids were returned
+#
+my @non_kb = grep { $_->[1] !~ /^kb\|/ } @$return;
+isnt(@non_kb, 0, "Use valid data (non kb-only): non KB ids appeared");
+
+#-- Test 12 - Repeat test 11 with kb_only option
+#   Expect only KB IDs to be returned
+#
+$options->{kb_only} = 1;
+
+$return = $sim_server->sims([$id], $options);
+@non_kb = grep { $_->[1] !~ /^kb\|/ } @$return;
+is(@non_kb, 0, "Use valid data (kb-only): only KB ids appeared");
+
+
+my %good_value = (
+        'kb_only'        => '1',
+        'kb_function2'   => '1',
+        'evalue_cutoff'  => '0.01',
+        'max_sims'       => '2',
+);
+
+#-- Tests 13-16 - Test options with good values
+note("\nTesting Good Values for each of the options \n");
+foreach my $key (keys(%good_value))
+{
+	$options = {};
+	$options->{$key} = $good_value{$key};
+        eval {$return = $sim_server->sims([$id], $options)};
+        is($@,'', "Test $key=$good_value{$key} - expect no errors");
+}
+
+
+note("Run unhappy Tests");
+
+#-- Tests 17 and 18 - Too many and too few parameters
+eval {$return = $sim_server->sims([$id], $options, 'EXTRA')};
+isnt($@, '', 'Call with too many parameters failed properly');
+
+eval {$return = $sim_server->sims([$id]);  };
+isnt($@, '', 'Call with too few parameters failed properly');
+
+#-- Tests 19 - 21 - Use invalid data.  Expect empty hash to be returned
+$return = $sim_server->sims(['abcdefghijkl'], $options);
+ok(!$@, "Call with invalid data and return has no error ");
+is(ref($return), 'ARRAY', "Use InValid data:  sims returns a list");
+is(@$return, 0, "Give no input: array is empty -- No warning");
+
+my @bad_ary = qw(not valid);
+
+#-- Tests 21 - 23 - Use bad structure IDs (e.g., not a reference). 
+eval {$return = $sim_server->sims(@bad_ary, $options) } ;
+ok($@, "Call with bad structure IDs and return has error ");
+
+is(ref($return), 'ARRAY', "Use bad structure IDs: sims returns a list");
+is(scalar @$return, 0, "Use bad structure IDs: list is empty");
+
+#-- Tests 24 - 26 - Use bad structure options (e.g., not a reference). 
+eval {$return = $sim_server->sims([$id], @bad_ary) } ;
+ok($@, "Call with bad structure option and return has error ");
+
+is(ref($return), 'ARRAY', "Use bad structure IDs: sims returns a list");
+is(scalar @$return, 0, "Use bad structure IDs: list is empty");
+
+#-- Test invalid options
+my $empty = [];
+my %bad_value = (
+        'kb_only'        => '123.45',
+        'kb_function2'   => '123.45',
+        'max_sims'       => '123.45',
+        'bad_data'       => '2',
+);
+
+note("\nTesting bad non-integer values \n");
+foreach my $key (keys(%bad_value))
+{
+	last;  # Skip for now because structures are not enforced or documented
+	$options = {};
+	$options->{$key} = $bad_value{$key};
+        eval {$return = $sim_server->sims([$id], $options)};
+        isnt($@,'', "Test $key=$bad_value{$key} - expect errors");
+}
+
+%bad_value = (
+        'kb_only'        => 'A',
+        'kb_function2'   => 'A',
+        'evalue_cutoff'  => 'A',
+        'max_sims'       => 'A',
+);
+
+note("\nTesting bad character values for integers and floating point \n");
+foreach my $key (keys(%bad_value))
+{
+	last;  # Skip for now because structures are not enforced or documented
+	$options = {};
+	$options->{$key} = $bad_value{$key};
+        eval {$return = $sim_server->sims([$id], $options)};
+        isnt($@,'', "Test $key=$bad_value{$key} - expect errors");
+}
+
+my %bad_struct = (
+        'kb_only'        => $empty,
+        'kb_function2'   => $empty,
+        'evalue_cutoff'  => $empty,
+        'max_sims'       => $empty,
+);
+
+note("\nTesting BAD data stuctures for options \n");
+foreach my $key (keys(%bad_struct))
+{
+	last;  # Skip for now because structures are not enforced or documented
+	$options = {};
+	$options->{$key} = $bad_struct{$key};
+        eval {$return = $sim_server->sims([$id], $options)};
+        isnt($@,'', "Test $key=$bad_struct{$key} - expect errors");
+}
+
+
+done_testing();
+
