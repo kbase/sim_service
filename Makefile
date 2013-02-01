@@ -40,7 +40,8 @@ test-client:
 
 deploy: $(DEPS) deploy-scripts deploy-libs deploy-service
 
-deploy-service: deploy-dir-service deploy-services deploy-monit
+deploy-client: $(DEPS) deploy-scripts deploy-libs
+deploy-service: $(DEPS) deploy-dir-service deploy-services deploy-monit
 
 $(DEPS): $(SERVER_SPEC)
 	mkdir -p tscripts
