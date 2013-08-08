@@ -75,24 +75,24 @@ options is a reference to a hash where the following keys are defined:
 	evalue_cutoff has a value which is a float
 	max_sims has a value which is an int
 sim_vec is a reference to a list containing 18 items:
-	0: a string
-	1: a string
-	2: a float
-	3: an int
-	4: an int
-	5: an int
-	6: an int
-	7: an int
-	8: an int
-	9: an int
-	10: a float
-	11: a float
-	12: an int
-	13: an int
-	14: a string
-	15: a string
-	16: a string
-	17: a string
+	0: (id1) a string
+	1: (id2) a string
+	2: (iden) a float
+	3: (ali_ln) an int
+	4: (mismatches) an int
+	5: (gaps) an int
+	6: (b1) an int
+	7: (e1) an int
+	8: (b2) an int
+	9: (e2) an int
+	10: (psc) a float
+	11: (bsc) a float
+	12: (ln1) an int
+	13: (ln2) an int
+	14: (tool) a string
+	15: (def2) a string
+	16: (ali) a string
+	17: (function2) a string
 
 </pre>
 
@@ -109,24 +109,24 @@ options is a reference to a hash where the following keys are defined:
 	evalue_cutoff has a value which is a float
 	max_sims has a value which is an int
 sim_vec is a reference to a list containing 18 items:
-	0: a string
-	1: a string
-	2: a float
-	3: an int
-	4: an int
-	5: an int
-	6: an int
-	7: an int
-	8: an int
-	9: an int
-	10: a float
-	11: a float
-	12: an int
-	13: an int
-	14: a string
-	15: a string
-	16: a string
-	17: a string
+	0: (id1) a string
+	1: (id2) a string
+	2: (iden) a float
+	3: (ali_ln) an int
+	4: (mismatches) an int
+	5: (gaps) an int
+	6: (b1) an int
+	7: (e1) an int
+	8: (b2) an int
+	9: (e2) an int
+	10: (psc) a float
+	11: (bsc) a float
+	12: (ln1) an int
+	13: (ln2) an int
+	14: (tool) a string
+	15: (def2) a string
+	16: (ali) a string
+	17: (function2) a string
 
 
 =end text
@@ -424,24 +424,24 @@ is enabled:
 
 <pre>
 a reference to a list containing 18 items:
-0: a string
-1: a string
-2: a float
-3: an int
-4: an int
-5: an int
-6: an int
-7: an int
-8: an int
-9: an int
-10: a float
-11: a float
-12: an int
-13: an int
-14: a string
-15: a string
-16: a string
-17: a string
+0: (id1) a string
+1: (id2) a string
+2: (iden) a float
+3: (ali_ln) an int
+4: (mismatches) an int
+5: (gaps) an int
+6: (b1) an int
+7: (e1) an int
+8: (b2) an int
+9: (e2) an int
+10: (psc) a float
+11: (bsc) a float
+12: (ln1) an int
+13: (ln2) an int
+14: (tool) a string
+15: (def2) a string
+16: (ali) a string
+17: (function2) a string
 
 </pre>
 
@@ -450,24 +450,24 @@ a reference to a list containing 18 items:
 =begin text
 
 a reference to a list containing 18 items:
-0: a string
-1: a string
-2: a float
-3: an int
-4: an int
-5: an int
-6: an int
-7: an int
-8: an int
-9: an int
-10: a float
-11: a float
-12: an int
-13: an int
-14: a string
-15: a string
-16: a string
-17: a string
+0: (id1) a string
+1: (id2) a string
+2: (iden) a float
+3: (ali_ln) an int
+4: (mismatches) an int
+5: (gaps) an int
+6: (b1) an int
+7: (e1) an int
+8: (b2) an int
+9: (e2) an int
+10: (psc) a float
+11: (bsc) a float
+12: (ln1) an int
+13: (ln2) an int
+14: (tool) a string
+15: (def2) a string
+16: (ali) a string
+17: (function2) a string
 
 
 =end text

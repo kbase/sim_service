@@ -1,6 +1,7 @@
 use Bio::KBase::SimService::Impl;
 
 use Bio::KBase::SimService::Service;
+use Plack::Middleware::CrossOrigin;
 
 
 
@@ -18,4 +19,4 @@ my $server = Bio::KBase::SimService::Service->new(instance_dispatch => { @dispat
 
 my $handler = sub { $server->handle_input(@_) };
 
-$handler;
+$handler = Plack::Middleware::CrossOrigin->wrap( $handler, origins => "*", headers => "*");

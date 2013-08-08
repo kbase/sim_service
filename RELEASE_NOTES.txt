@@ -9,4 +9,4 @@ Please note that these similarities are neither comprehensive nor complete.
 CHANGES - 8/8/2013.
 -------------------------------
 
-No recent changes, module is stable.
+Added docs deployment.

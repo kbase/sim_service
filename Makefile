@@ -11,12 +11,14 @@ MOD = SimService
 LDIR = lib/Bio/KBase/$(MOD)
 DEPS = $(LDIR)/Impl.pm $(LDIR)/Service.pm $(LDIR)/Client.pm
 
-TPAGE_ARGS = --define kb_top=$(TARGET) --define kb_runtime=$(DEPLOY_RUNTIME) --define kb_service_name=$(SERVICE) \
+TPAGE_ARGS = --define kb_top=$(TARGET) \
+	--define kb_runtime=$(DEPLOY_RUNTIME) \
+	--define kb_service_name=$(SERVICE) \
 	--define kb_service_port=$(SERVICE_PORT)
 
 CLIENT_TESTS = $(wildcard t/client-tests/*.t)
 
-all: $(DEPS) bin
+all: $(DEPS) bin build-docs
 
 test: test-client
 	echo "running client and script tests"
@@ -38,9 +40,10 @@ test-client:
 		fi \
 	done
 
-deploy: $(DEPS) deploy-scripts deploy-libs deploy-service
+deploy-all: deploy
+deploy: $(DEPS) deploy-scripts deploy-libs deploy-docs deploy-service
 
-deploy-client: $(DEPS) deploy-scripts deploy-libs
+deploy-client: $(DEPS) deploy-scripts deploy-libs deploy-docs
 deploy-service: $(DEPS) deploy-dir-service deploy-services deploy-monit
 
 $(DEPS): $(SERVER_SPEC)
@@ -58,12 +61,27 @@ $(DEPS): $(SERVER_SPEC)
 bin: $(BIN_PERL)
 
 deploy-services:
-	$(TPAGE) $(TPAGE_ARGS) service/start_service.tt > $(TARGET)/services/$(SERVICE)/start_service
-	chmod +x $(TARGET)/services/$(SERVICE)/start_service
-	$(TPAGE) $(TPAGE_ARGS) service/stop_service.tt > $(TARGET)/services/$(SERVICE)/stop_service
-	chmod +x $(TARGET)/services/$(SERVICE)/stop_service
+	$(TPAGE) $(TPAGE_ARGS) service/start_service.tt > $(SERVICE_DIR)/start_service
+	chmod +x $(SERVICE_DIR)/start_service
+	$(TPAGE) $(TPAGE_ARGS) service/stop_service.tt > $(SERVICE_DIR)/stop_service
+	chmod +x $(SERVICE_DIR)/stop_service
 
 deploy-monit:
-	$(TPAGE) $(TPAGE_ARGS) service/process.$(SERVICE).tt > $(TARGET)/services/$(SERVICE)/process.$(SERVICE)
+	$(TPAGE) $(TPAGE_ARGS) service/process.$(SERVICE).tt > $(SERVICE_DIR)/process.$(SERVICE)
+
+
+build-docs: docs/$(SERVICE).html
+
+docs/$(SERVICE).html: $(DEPS)
+	mkdir -p docs
+	pod2html -t "Similarity Service API" --infile=$(LDIR)/Client.pm --outfile=docs/$(SERVICE).html
+	rm -f pod2htmd.tmp
+
+deploy-docs: build-docs
+	mkdir -p $(SERVICE_DIR)/webroot
+	cp docs/*.html $(SERVICE_DIR)/webroot/.
+	
 
 include $(TOP_DIR)/tools/Makefile.common.rules
+
+
