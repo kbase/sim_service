@@ -1,0 +1,12 @@
+OVERVIEW
+--------
+
+The sim_service module provides an interface to the SEED project similarity service, which
+stores precomputed similarities for a large number of proteins.
+
+Please note that these similarities are neither comprehensive nor complete.
+
+CHANGES - 8/8/2013.
+-------------------------------
+
+No recent changes, module is stable.
